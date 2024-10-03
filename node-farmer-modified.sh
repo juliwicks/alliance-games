@@ -47,13 +47,12 @@ generate_uuid() {
 
 # Get the parameters with validation
 device_name=$(get_non_empty_input "Enter device_name: ")
-device_name_lower=$(echo "$device_name" | tr '[:upper:]' '[:lower:]')  # Convert to lowercase
 
 # Create a directory for this device's configuration
-device_dir="./$device_name_lower"  # Use lowercase name here
+device_dir="./$device_name"
 if [ ! -d "$device_dir" ]; then
     mkdir "$device_dir"
-    echo -e "${INFO}Created directory for $device_name_lower at $device_dir${NC}"
+    echo -e "${INFO}Created directory for $device_name at $device_dir${NC}"
 fi
 
 # Proxy configuration
@@ -97,9 +96,8 @@ EOL
 fi
 
 cat <<EOL >> "$device_dir/Dockerfile"
-CMD ["/bin/bash", "-c", "exec /app/auto_start.sh"]
+CMD ["/bin/bash", "-c", "exec /bin/bash"]
 EOL
-
 # Create the redsocks configuration file only if proxy is used
 if [[ "$use_proxy" == "Y" || "$use_proxy" == "y" ]]; then
     cat <<EOL > "$device_dir/redsocks.conf"
@@ -168,11 +166,20 @@ fi
 
 # Step 5: Run the Docker container with the user-provided settings and mount the UUID
 mac_address=$(generate_mac_address)
-echo -e "${INFO}Starting Docker container...${NC}"
-docker build -t "alliance_games_docker_$device_name_lower" "$device_dir"  # Use lowercase name here
+echo -e "${INFO}Using generated MAC address: $mac_address${NC}"
 
+# Convert device_name to lowercase for the Docker image name
+device_name_lower=$(echo "$device_name" | tr '[:upper:]' '[:lower:]')
+
+# Step 6: Build the Docker image specific to this device
+echo -e "${INFO}Building the Docker image '$device_name_lower'...${NC}"
+docker build -t "$device_name_lower" "$device_dir"
+
+echo -e "${SUCCESS}Congratulations! The Docker container '${device_name}' has been successfully set up with a fake UUID.${NC}"
+echo -e "${WARNING}Now copy and paste the 3rd command from AG Device Initialization board in the following command prompt...${NC}"
+# Step 7: Run the Docker container
 if [[ "$use_proxy" == "Y" || "$use_proxy" == "y" ]]; then
-    docker run -it --cap-add=NET_ADMIN --mac-address="$mac_address" -v "$fake_product_uuid_file:/sys/class/dmi/id/product_uuid" --name="$device_name_lower" "alliance_games_docker_$device_name_lower"  # Use lowercase name here
+    docker run -it --cap-add=NET_ADMIN --mac-address="$mac_address" -v "$fake_product_uuid_file:/sys/class/dmi/id/product_uuid" --name="$device_name" "$device_name_lower"
 else
-    docker run -it --mac-address="$mac_address" -v "$fake_product_uuid_file:/sys/class/dmi/id/product_uuid" --name="$device_name_lower" "alliance_games_docker_$device_name_lower"  # Use lowercase name here
+    docker run -it --mac-address="$mac_address" -v "$fake_product_uuid_file:/sys/class/dmi/id/product_uuid" --name="$device_name" "$device_name_lower"
 fi
