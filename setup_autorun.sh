@@ -19,7 +19,7 @@ cat <<EOL | tee "$autorun_script" > /dev/null
 #!/bin/bash
 
 # Start the Docker container and execute the custom command
-docker start "$device_name" && docker exec -it "$device_name" /bin/bash -c "sleep 2 && echo '$custom_run_script' && $custom_run_script"
+docker start "$device_name" && docker exec "$device_name" /bin/bash -c "sleep 2 && echo '$custom_run_script' && $custom_run_script"
 EOL
 
 # Make the autorun script executable
