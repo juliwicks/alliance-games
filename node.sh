@@ -172,7 +172,14 @@ custom_command=$(get_non_empty_input "Enter the command to run on startup: ")
 autorun_script="$device_dir/autorun.sh"
 cat <<EOL > "$autorun_script"
 #!/bin/bash
-# Wait for a short period before running the command
+# Wait for a short period before running the Docker commands
+sleep 5
+# Start the Docker container
+echo "Starting Docker container: $device_name"
+docker start "$device_name"
+# Execute a shell inside the Docker container
+docker exec -it "$device_name" /bin/bash
+# Wait for the Docker commands to finish before executing the custom command
 sleep 2
 # Execute the user-provided command
 echo "Executing startup command: $custom_command"
@@ -189,25 +196,12 @@ RUN chmod +x /usr/local/bin/autorun.sh
 ENTRYPOINT ["/usr/local/bin/autorun.sh"]
 EOL
 
-# Step 5: Run the Docker container with the user-provided settings and mount the UUID
-mac_address=$(generate_mac_address)
-echo -e "${INFO}Using generated MAC address: $mac_address${NC}"
+# Step 5: Run the Docker build and create the container
+echo -e "${INFO}Building Docker image...${NC}"
+docker build -t "$device_name" "$device_dir"
 
-# Convert device_name to lowercase for the Docker image name
-device_name_lower=$(echo "$device_name" | tr '[:upper:]' '[:lower:]')
+# Run the Docker container
+echo -e "${INFO}Running Docker container...${NC}"
+docker run -d --name "$device_name" --privileged --network host -v "$fake_product_uuid_file:/sys/class/dmi/id/product_uuid" --name="$device_name" "$device_name_lower"
 
-# Step 6: Build the Docker image specific to this device
-echo -e "${INFO}Building the Docker image '$device_name_lower'...${NC}"
-docker build -t "$device_name_lower" "$device_dir"
-
-echo -e "${SUCCESS}Congratulations! The Docker container '${device_name}' has been successfully set up with a fake UUID.${NC}"
-echo -e "${WARNING}Now copy and paste the 3rd command from AG Device Initialization board in the following command prompt...${NC}"
-
-# Step 7: Run the Docker container
-if [[ "$use_proxy" == "Y" || "$use_proxy" == "y" ]]; then
-    docker run -it --cap-add=NET_ADMIN --mac-address="$mac_address" -v "$fake_product_uuid_file:/sys/class/dmi/id/product_uuid" --name="$device_name" "$device_name_lower"
-else
-    docker run -it --mac-address="$mac_address" -v "$fake_product_uuid_file:/sys/class/dmi/id/product_uuid" --name="$device_name" "$device_name_lower"
-fi
-
-
+echo -e "${SUCCESS}Setup complete. The Docker container is now running with the autorun script configured.${NC}"
