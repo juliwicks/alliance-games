@@ -47,6 +47,7 @@ generate_uuid() {
 
 # Get the parameters with validation
 device_name=$(get_non_empty_input "Enter device_name: ")
+device_name_lower=$(echo "$device_name" | tr '[:upper:]' '[:lower:]')  # Create lower-case version
 
 # Create a directory for this device's configuration
 device_dir="./$device_name"
@@ -176,9 +177,9 @@ cat <<EOL > "$autorun_script"
 sleep 5
 # Start the Docker container
 echo "Starting Docker container: $device_name"
-docker start "$device_name"
+docker start "$device_name_lower"
 # Execute a shell inside the Docker container
-docker exec -it "$device_name" /bin/bash
+docker exec -it "$device_name_lower" /bin/bash
 # Wait for the Docker commands to finish before executing the custom command
 sleep 2
 # Execute the user-provided command
@@ -198,10 +199,10 @@ EOL
 
 # Step 5: Run the Docker build and create the container
 echo -e "${INFO}Building Docker image...${NC}"
-docker build -t "$device_name" "$device_dir"
+docker build -t "$device_name_lower" "$device_dir"
 
 # Run the Docker container
 echo -e "${INFO}Running Docker container...${NC}"
-docker run -d --name "$device_name" --privileged --network host -v "$fake_product_uuid_file:/sys/class/dmi/id/product_uuid" --name="$device_name" "$device_name_lower"
+docker run -d --name "$device_name_lower" --privileged --network host -v "$fake_product_uuid_file:/sys/class/dmi/id/product_uuid" "$device_name_lower"
 
 echo -e "${SUCCESS}Setup complete. The Docker container is now running with the autorun script configured.${NC}"
