@@ -98,6 +98,7 @@ fi
 cat <<EOL >> "$device_dir/Dockerfile"
 CMD ["/bin/bash", "-c", "exec /bin/bash"]
 EOL
+
 # Create the redsocks configuration file only if proxy is used
 if [[ "$use_proxy" == "Y" || "$use_proxy" == "y" ]]; then
     cat <<EOL > "$device_dir/redsocks.conf"
@@ -177,9 +178,21 @@ docker build -t "alliance_games_docker_$device_name_lower" "$device_dir"
 
 echo -e "${SUCCESS}Congratulations! The Docker container '${device_name}' has been successfully set up with a fake UUID.${NC}"
 echo -e "${WARNING}Now copy and paste the 3rd command from AG Device Initialization board in the following command prompt...${NC}"
+
 # Step 7: Run the Docker container
 if [[ "$use_proxy" == "Y" || "$use_proxy" == "y" ]]; then
     docker run -it --cap-add=NET_ADMIN --mac-address="$mac_address" -v "$fake_product_uuid_file:/sys/class/dmi/id/product_uuid" --name="$device_name" "alliance_games_docker_$device_name_lower"
 else
     docker run -it --mac-address="$mac_address" -v "$fake_product_uuid_file:/sys/class/dmi/id/product_uuid" --name="$device_name" "alliance_games_docker_$device_name_lower"
+fi
+
+# Step 8: Ask for the command to autostart on reboot
+read -p "Enter the command you want to run on reboot (leave empty to skip): " autostart_command
+
+if [[ -n "$autostart_command" ]]; then
+    # Add command to crontab for autostart
+    (crontab -l 2>/dev/null; echo "@reboot $autostart_command") | crontab -
+    echo -e "${SUCCESS}The command has been added to crontab for autostart on reboot.${NC}"
+else
+    echo -e "${INFO}No command provided for autostart on reboot. Skipping...${NC}"
 fi
