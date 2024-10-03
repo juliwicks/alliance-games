@@ -96,7 +96,7 @@ EOL
 fi
 
 cat <<EOL >> "$device_dir/Dockerfile"
-CMD ["/bin/bash", "-c", "exec /bin/bash"]
+CMD ["/app/launch_command.sh"]
 EOL
 
 # Create the redsocks configuration file only if proxy is used
@@ -165,36 +165,36 @@ if [ ! -f "$fake_product_uuid_file" ]; then
     echo "$generated_uuid" > "$fake_product_uuid_file"
 fi
 
-# Prompt for the launch command
+# Step 5: Ask for the launch command and save it
 launch_command=$(get_non_empty_input "Enter the command to launch the node binary: ")
 launch_command_file="$device_dir/launch_command.sh"
-
-# Save the launch command to a file
-cat <<EOL > "$launch_command_file"
-#!/bin/bash
-# Launch command for the node
-$launch_command
-EOL
-
+echo "#!/bin/bash" > "$launch_command_file"
+echo "$launch_command" >> "$launch_command_file"
 chmod +x "$launch_command_file"
 
-# Step 5: Run the Docker container with the user-provided settings and mount the UUID
+# Step 6: Generate MAC address
 mac_address=$(generate_mac_address)
 echo -e "${INFO}Using generated MAC address: $mac_address${NC}"
 
 # Convert device_name to lowercase for the Docker image name
 device_name_lower=$(echo "$device_name" | tr '[:upper:]' '[:lower:]')
 
-# Step 6: Build the Docker image specific to this device
+# Step 7: Build the Docker image specific to this device
 echo -e "${INFO}Building the Docker image 'alliance_games_docker_$device_name_lower'...${NC}"
 docker build -t "alliance_games_docker_$device_name_lower" "$device_dir"
 
 echo -e "${SUCCESS}Congratulations! The Docker container '${device_name}' has been successfully set up with a fake UUID.${NC}"
 echo -e "${WARNING}Now copy and paste the 3rd command from AG Device Initialization board in the following command prompt...${NC}"
 
-# Step 7: Run the Docker container
+# Step 8: Run the Docker container with the user-provided settings and mount the UUID and launch command file
 if [[ "$use_proxy" == "Y" || "$use_proxy" == "y" ]]; then
-    docker run -it --cap-add=NET_ADMIN --mac-address="$mac_address" -v "$fake_product_uuid_file:/sys/class/dmi/id/product_uuid" -v "$launch_command_file:/app/launch_command.sh" --name="$device_name" "alliance_games_docker_$device_name_lower"
+    docker run -it --restart unless-stopped --cap-add=NET_ADMIN --mac-address="$mac_address" \
+    -v "$fake_product_uuid_file:/sys/class/dmi/id/product_uuid" \
+    -v "$launch_command_file:/app/launch_command.sh" \
+    --name="$device_name" "alliance_games_docker_$device_name_lower"
 else
-    docker run -it --mac-address="$mac_address" -v "$fake_product_uuid_file:/sys/class/dmi/id/product_uuid" -v "$launch_command_file:/app/launch_command.sh" --name="$device_name" "alliance_games_docker_$device_name_lower"
+    docker run -it --restart unless-stopped --mac-address="$mac_address" \
+    -v "$fake_product_uuid_file:/sys/class/dmi/id/product_uuid" \
+    -v "$launch_command_file:/app/launch_command.sh" \
+    --name="$device_name" "alliance_games_docker_$device_name_lower"
 fi
