@@ -172,14 +172,14 @@ echo -e "${INFO}Using generated MAC address: $mac_address${NC}"
 device_name_lower=$(echo "$device_name" | tr '[:upper:]' '[:lower:]')
 
 # Step 6: Build the Docker image specific to this device
-echo -e "${INFO}Building the Docker image 'alliance_games_docker_$device_name_lower'...${NC}"
-docker build -t "alliance_games_docker_$device_name_lower" "$device_dir"
+echo -e "${INFO}Building the Docker image '$device_name_lower'...${NC}"
+docker build -t "$device_name_lower" "$device_dir"
 
 echo -e "${SUCCESS}Congratulations! The Docker container '${device_name}' has been successfully set up with a fake UUID.${NC}"
 echo -e "${WARNING}Now copy and paste the 3rd command from AG Device Initialization board in the following command prompt...${NC}"
 # Step 7: Run the Docker container
 if [[ "$use_proxy" == "Y" || "$use_proxy" == "y" ]]; then
-    docker run -it --cap-add=NET_ADMIN --mac-address="$mac_address" -v "$fake_product_uuid_file:/sys/class/dmi/id/product_uuid" --name="$device_name" "alliance_games_docker_$device_name_lower"
+    docker run -it --cap-add=NET_ADMIN --mac-address="$mac_address" -v "$fake_product_uuid_file:/sys/class/dmi/id/product_uuid" --name="$device_name" "$device_name_lower"
 else
-    docker run -it --mac-address="$mac_address" -v "$fake_product_uuid_file:/sys/class/dmi/id/product_uuid" --name="$device_name" "alliance_games_docker_$device_name_lower"
+    docker run -it --mac-address="$mac_address" -v "$fake_product_uuid_file:/sys/class/dmi/id/product_uuid" --name="$device_name" "$device_name_lower"
 fi
