@@ -194,5 +194,4 @@ if [[ -n "$autostart_command" ]]; then
     (crontab -l 2>/dev/null; echo "@reboot $autostart_command") | crontab -
     echo -e "${SUCCESS}The command has been added to crontab for autostart on reboot.${NC}"
 else
-    echo -e "${INFO}No command provided for autostart on reboot. Skipping...${NC}"
-fi
+    echo -e "${INFO
