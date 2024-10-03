@@ -9,7 +9,7 @@ read -p "Enter device name: " device_name
 read -p "Enter custom run script to execute: " custom_run_script
 
 # Create the autorun script that will be executed on startup
-cat <<EOL > "$autorun_script"
+cat <<EOL | sudo tee "$autorun_script" > /dev/null
 #!/bin/bash
 
 # Start the Docker container and execute the custom command
@@ -17,10 +17,10 @@ docker start "$device_name" && docker exec -it "$device_name" /bin/bash -c "slee
 EOL
 
 # Make the autorun script executable
-chmod +x "$autorun_script"
+sudo chmod +x "$autorun_script"
 
 # Create the systemd service file
-cat <<EOL > "$service_file"
+cat <<EOL | sudo tee "$service_file" > /dev/null
 [Unit]
 Description=Docker Autorun Service
 After=docker.service
