@@ -166,7 +166,7 @@ if [ ! -f "$fake_product_uuid_file" ]; then
 fi
 
 # Step 5: Get the command to autostart
-autostart_command=$(get_non_empty_input "Enter the command to autostart when the container reboots: ")
+autostart_command=$(get_non_empty_input "Enter the command to autostart when the container reboots (to be run in /app): ")
 
 # Step 6: Run the Docker container with the user-provided settings and mount the UUID
 mac_address=$(generate_mac_address)
@@ -180,16 +180,11 @@ echo -e "${INFO}Building the Docker image 'alliance_games_docker_$device_name_lo
 docker build -t "alliance_games_docker_$device_name_lower" "$device_dir"
 
 echo -e "${SUCCESS}Congratulations! The Docker container '${device_name}' has been successfully set up with a fake UUID.${NC}"
-echo -e "${WARNING}Now copy and paste the 3rd command from AG Device Initialization board in the following command prompt...${NC}"
+echo -e "${WARNING}Now the command you specified will be executed in the container's /app directory on startup...${NC}"
 
 # Step 8: Run the Docker container
 if [[ "$use_proxy" == "Y" || "$use_proxy" == "y" ]]; then
-    docker run -it --cap-add=NET_ADMIN --mac-address="$mac_address" -v "$fake_product_uuid_file:/sys/class/dmi/id/product_uuid" --name="$device_name" "alliance_games_docker_$device_name_lower" bash -c "$autostart_command"
+    docker run -it --cap-add=NET_ADMIN --mac-address="$mac_address" -v "$fake_product_uuid_file:/sys/class/dmi/id/product_uuid" --name="$device_name" "alliance_games_docker_$device_name_lower" bash -c "cd /app && $autostart_command"
 else
-    docker run -it --mac-address="$mac_address" -v "$fake_product_uuid_file:/sys/class/dmi/id/product_uuid" --name="$device_name" "alliance_games_docker_$device_name_lower" bash -c "$autostart_command"
+    docker run -it --mac-address="$mac_address" -v "$fake_product_uuid_file:/sys/class/dmi/id/product_uuid" --name="$device_name" "alliance_games_docker_$device_name_lower" bash -c "cd /app && $autostart_command"
 fi
-
-# Step 9: Add the autostart command to the CMD in the Dockerfile
-sed -i "s|CMD \[\"/bin/bash\", \"-c\", \"exec /bin/bash\"\]|CMD [\"/bin/bash\", \"-c\", \"$autostart_command\"]|g" "$device_dir/Dockerfile"
-
-echo -e "${SUCCESS}The Docker container '${device_name}' has been set up to run '$autostart_command' on reboot.${NC}"
