@@ -98,7 +98,6 @@ fi
 cat <<EOL >> "$device_dir/Dockerfile"
 CMD ["/bin/bash", "-c", "exec /bin/bash"]
 EOL
-
 # Create the redsocks configuration file only if proxy is used
 if [[ "$use_proxy" == "Y" || "$use_proxy" == "y" ]]; then
     cat <<EOL > "$device_dir/redsocks.conf"
@@ -158,13 +157,32 @@ exec "\$@"
 EOL
 fi
 
-# Step 5: Generate a fake product_uuid and store it in a file inside the device directory
+# Step 4: Generate a fake product_uuid and store it in a file inside the device directory
 fake_product_uuid_file="$device_dir/fake_uuid.txt"
 if [ ! -f "$fake_product_uuid_file" ]; then
     generated_uuid=$(generate_uuid)
     echo "$generated_uuid" > "$fake_product_uuid_file"
 fi
 
+# Step 5: Run the Docker container with the user-provided settings and mount the UUID
+mac_address=$(generate_mac_address)
+echo -e "${INFO}Using generated MAC address: $mac_address${NC}"
+
+# Convert device_name to lowercase for the Docker image name
+device_name_lower=$(echo "$device_name" | tr '[:upper:]' '[:lower:]')
+
+# Step 6: Build the Docker image specific to this device
+echo -e "${INFO}Building the Docker image 'alliance_games_docker_$device_name_lower'...${NC}"
+docker build -t "alliance_games_docker_$device_name_lower" "$device_dir"
+
+echo -e "${SUCCESS}Congratulations! The Docker container '${device_name}' has been successfully set up with a fake UUID.${NC}"
+echo -e "${WARNING}Now copy and paste the 3rd command from AG Device Initialization board in the following command prompt...${NC}"
+# Step 7: Run the Docker container
+if [[ "$use_proxy" == "Y" || "$use_proxy" == "y" ]]; then
+    docker run -it --cap-add=NET_ADMIN --mac-address="$mac_address" -v "$fake_product_uuid_file:/sys/class/dmi/id/product_uuid" --name="$device_name" "alliance_games_docker_$device_name_lower"
+else
+    docker run -it --mac-address="$mac_address" -v "$fake_product_uuid_file:/sys/class/dmi/id/product_uuid" --name="$device_name" "alliance_games_docker_$device_name_lower"
+fi
 # Step 5: Ask for the command to autostart on reboot
 read -p "Enter the command you want to run on reboot (leave empty to skip): " autostart_command
 
@@ -175,33 +193,3 @@ if [[ -n "$autostart_command" ]]; then
 else
     echo -e "${INFO}No command provided for autostart on reboot. Skipping...${NC}"
 fi
-
-# Step 6: Run the Docker container with the user-provided settings and mount the UUID
-mac_address=$(generate_mac_address)
-echo -e "${INFO}Using generated MAC address: $mac_address${NC}"
-
-# Convert device_name to lowercase for the Docker image name
-device_name_lower=$(echo "$device_name" | tr '[:upper:]' '[:lower:]')
-
-# Step 7: Build the Docker image
-docker build -t "$device_name_lower" "$device_dir"
-
-# Step 8: Run the Docker container
-echo -e "${INFO}Running the Docker container...${NC}"
-if [[ "$use_proxy" == "Y" || "$use_proxy" == "y" ]]; then
-    docker run -d --name "$device_name_lower" --privileged --net=host \
-    --env PRODUCT_UUID="$(cat $fake_product_uuid_file)" \
-    --env MAC_ADDRESS="$mac_address" \
-    --cap-add=NET_ADMIN \
-    --cap-add=NET_RAW \
-    -v "$device_dir:/app" "$device_name_lower"
-else
-    docker run -d --name "$device_name_lower" --privileged --net=host \
-    --env PRODUCT_UUID="$(cat $fake_product_uuid_file)" \
-    --env MAC_ADDRESS="$mac_address" \
-    --cap-add=NET_ADMIN \
-    --cap-add=NET_RAW \
-    -v "$device_dir:/app" "$device_name_lower"
-fi
-
-echo -e "${SUCCESS}Docker container $device_name_lower has been started successfully!${NC}"
