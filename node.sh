@@ -47,7 +47,6 @@ generate_uuid() {
 
 # Get the parameters with validation
 device_name=$(get_non_empty_input "Enter device_name: ")
-device_name_lower=$(echo "$device_name" | tr '[:upper:]' '[:lower:]')  # Create lower-case version
 
 # Create a directory for this device's configuration
 device_dir="./$device_name"
@@ -99,7 +98,6 @@ fi
 cat <<EOL >> "$device_dir/Dockerfile"
 CMD ["/bin/bash", "-c", "exec /bin/bash"]
 EOL
-
 # Create the redsocks configuration file only if proxy is used
 if [[ "$use_proxy" == "Y" || "$use_proxy" == "y" ]]; then
     cat <<EOL > "$device_dir/redsocks.conf"
@@ -166,43 +164,22 @@ if [ ! -f "$fake_product_uuid_file" ]; then
     echo "$generated_uuid" > "$fake_product_uuid_file"
 fi
 
-# Ask the user for the custom command to run at startup
-custom_command=$(get_non_empty_input "Enter the command to run on startup: ")
+# Step 5: Run the Docker container with the user-provided settings and mount the UUID
+mac_address=$(generate_mac_address)
+echo -e "${INFO}Using generated MAC address: $mac_address${NC}"
 
-# Create an autorun script that will execute the custom command
-autorun_script="$device_dir/autorun.sh"
-cat <<EOL > "$autorun_script"
-#!/bin/bash
-# Wait for a short period before running the Docker commands
-sleep 5
-# Start the Docker container
-echo "Starting Docker container: $device_name"
-docker start "$device_name_lower"
-# Execute a shell inside the Docker container
-docker exec -it "$device_name_lower" /bin/bash
-# Wait for the Docker commands to finish before executing the custom command
-sleep 2
-# Execute the user-provided command
-echo "Executing startup command: $custom_command"
-$custom_command
-EOL
+# Convert device_name to lowercase for the Docker image name
+device_name_lower=$(echo "$device_name" | tr '[:upper:]' '[:lower:]')
 
-# Make the autorun script executable
-chmod +x "$autorun_script"
+# Step 6: Build the Docker image specific to this device
+echo -e "${INFO}Building the Docker image 'alliance_games_docker_$device_name_lower'...${NC}"
+docker build -t "alliance_games_docker_$device_name_lower" "$device_dir"
 
-# Add the autorun script to the Dockerfile
-cat <<EOL >> "$device_dir/Dockerfile"
-COPY autorun.sh /usr/local/bin/autorun.sh
-RUN chmod +x /usr/local/bin/autorun.sh
-ENTRYPOINT ["/usr/local/bin/autorun.sh"]
-EOL
-
-# Step 5: Run the Docker build and create the container
-echo -e "${INFO}Building Docker image...${NC}"
-docker build -t "$device_name_lower" "$device_dir"
-
-# Run the Docker container
-echo -e "${INFO}Running Docker container...${NC}"
-docker run -d --name "$device_name_lower" --privileged --network host -v "$fake_product_uuid_file:/sys/class/dmi/id/product_uuid" "$device_name_lower"
-
-echo -e "${SUCCESS}Setup complete. The Docker container is now running with the autorun script configured.${NC}"
+echo -e "${SUCCESS}Congratulations! The Docker container '${device_name}' has been successfully set up with a fake UUID.${NC}"
+echo -e "${WARNING}Now copy and paste the 3rd command from AG Device Initialization board in the following command prompt...${NC}"
+# Step 7: Run the Docker container
+if [[ "$use_proxy" == "Y" || "$use_proxy" == "y" ]]; then
+    docker run -it --cap-add=NET_ADMIN --mac-address="$mac_address" -v "$fake_product_uuid_file:/sys/class/dmi/id/product_uuid" --name="$device_name" "alliance_games_docker_$device_name_lower"
+else
+    docker run -it --mac-address="$mac_address" -v "$fake_product_uuid_file:/sys/class/dmi/id/product_uuid" --name="$device_name" "alliance_games_docker_$device_name_lower"
+fi
