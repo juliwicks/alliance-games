@@ -95,8 +95,11 @@ ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 EOL
 fi
 
+# Include auto_start.sh in the Dockerfile
 cat <<EOL >> "$device_dir/Dockerfile"
-CMD ["/app/launch_command.sh"]
+COPY auto_start.sh /app/auto_start.sh
+RUN chmod +x /app/auto_start.sh
+CMD ["/bin/bash", "/app/auto_start.sh"]
 EOL
 
 # Create the redsocks configuration file only if proxy is used
@@ -158,6 +161,27 @@ exec "\$@"
 EOL
 fi
 
+# Step 2: Create the auto_start.sh script
+echo -e "${INFO}Creating auto_start.sh script...${NC}"
+cat << 'EOL' > "$device_dir/auto_start.sh"
+#!/bin/bash
+
+# Prompt the user for the command to autorun
+echo "Please enter the command you want to autorun on container start:"
+read -r command_input
+
+# Save the command to a script
+echo "#!/bin/bash" > /app/autorun_command.sh
+echo "$command_input" >> /app/autorun_command.sh
+
+# Make the autorun command script executable
+chmod +x /app/autorun_command.sh
+
+# Run the command
+echo "Running the saved command..."
+/app/autorun_command.sh
+EOL
+
 # Step 4: Generate a fake product_uuid and store it in a file inside the device directory
 fake_product_uuid_file="$device_dir/fake_uuid.txt"
 if [ ! -f "$fake_product_uuid_file" ]; then
@@ -165,36 +189,22 @@ if [ ! -f "$fake_product_uuid_file" ]; then
     echo "$generated_uuid" > "$fake_product_uuid_file"
 fi
 
-# Step 5: Ask for the launch command and save it
-launch_command=$(get_non_empty_input "Enter the command to launch the node binary: ")
-launch_command_file="$device_dir/launch_command.sh"
-echo "#!/bin/bash" > "$launch_command_file"
-echo "$launch_command" >> "$launch_command_file"
-chmod +x "$launch_command_file"
-
-# Step 6: Generate MAC address
+# Step 5: Run the Docker container with the user-provided settings and mount the UUID
 mac_address=$(generate_mac_address)
 echo -e "${INFO}Using generated MAC address: $mac_address${NC}"
 
 # Convert device_name to lowercase for the Docker image name
 device_name_lower=$(echo "$device_name" | tr '[:upper:]' '[:lower:]')
 
-# Step 7: Build the Docker image specific to this device
+# Step 6: Build the Docker image specific to this device
 echo -e "${INFO}Building the Docker image 'alliance_games_docker_$device_name_lower'...${NC}"
 docker build -t "alliance_games_docker_$device_name_lower" "$device_dir"
 
 echo -e "${SUCCESS}Congratulations! The Docker container '${device_name}' has been successfully set up with a fake UUID.${NC}"
 echo -e "${WARNING}Now copy and paste the 3rd command from AG Device Initialization board in the following command prompt...${NC}"
-
-# Step 8: Run the Docker container with the user-provided settings and mount the UUID and launch command file
+# Step 7: Run the Docker container
 if [[ "$use_proxy" == "Y" || "$use_proxy" == "y" ]]; then
-    docker run -it --restart unless-stopped --cap-add=NET_ADMIN --mac-address="$mac_address" \
-    -v "$fake_product_uuid_file:/sys/class/dmi/id/product_uuid" \
-    -v "$launch_command_file:/app/launch_command.sh" \
-    --name="$device_name" "alliance_games_docker_$device_name_lower"
+    docker run -it --cap-add=NET_ADMIN --mac-address="$mac_address" -v "$fake_product_uuid_file:/sys/class/dmi/id/product_uuid" --name="$device_name" "alliance_games_docker_$device_name_lower"
 else
-    docker run -it --restart unless-stopped --mac-address="$mac_address" \
-    -v "$fake_product_uuid_file:/sys/class/dmi/id/product_uuid" \
-    -v "$launch_command_file:/app/launch_command.sh" \
-    --name="$device_name" "alliance_games_docker_$device_name_lower"
+    docker run -it --mac-address="$mac_address" -v "$fake_product_uuid_file:/sys/class/dmi/id/product_uuid" --name="$device_name" "alliance_games_docker_$device_name_lower"
 fi
