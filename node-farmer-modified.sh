@@ -55,6 +55,9 @@ if [ ! -d "$device_dir" ]; then
     echo -e "${INFO}Created directory for $device_name at $device_dir${NC}"
 fi
 
+# Prompt for the autostart command
+autostart_command=$(get_non_empty_input "Enter the command to autostart in /app: ")
+
 # Proxy configuration
 read -p "Do you want to use a proxy? (Y/N): " use_proxy
 
@@ -95,8 +98,9 @@ ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 EOL
 fi
 
+# Update CMD to execute the autostart command
 cat <<EOL >> "$device_dir/Dockerfile"
-CMD ["/bin/bash", "-c", "exec /bin/bash"]
+CMD ["/bin/bash", "-c", "$autostart_command"]
 EOL
 
 # Create the redsocks configuration file only if proxy is used
@@ -165,26 +169,23 @@ if [ ! -f "$fake_product_uuid_file" ]; then
     echo "$generated_uuid" > "$fake_product_uuid_file"
 fi
 
-# Step 5: Get the command to autostart
-autostart_command=$(get_non_empty_input "Enter the command to autostart when the container reboots (to be run in /app): ")
-
-# Step 6: Run the Docker container with the user-provided settings and mount the UUID
+# Step 5: Run the Docker container with the user-provided settings and mount the UUID
 mac_address=$(generate_mac_address)
 echo -e "${INFO}Using generated MAC address: $mac_address${NC}"
 
 # Convert device_name to lowercase for the Docker image name
 device_name_lower=$(echo "$device_name" | tr '[:upper:]' '[:lower:]')
 
-# Step 7: Build the Docker image specific to this device
+# Step 6: Build the Docker image specific to this device
 echo -e "${INFO}Building the Docker image 'alliance_games_docker_$device_name_lower'...${NC}"
 docker build -t "alliance_games_docker_$device_name_lower" "$device_dir"
 
 echo -e "${SUCCESS}Congratulations! The Docker container '${device_name}' has been successfully set up with a fake UUID.${NC}"
-echo -e "${WARNING}Now the command you specified will be executed in the container's /app directory on startup...${NC}"
+echo -e "${WARNING}Now copy and paste the 3rd command from AG Device Initialization board in the following command prompt...${NC}"
 
-# Step 8: Run the Docker container
+# Step 7: Run the Docker container
 if [[ "$use_proxy" == "Y" || "$use_proxy" == "y" ]]; then
-    docker run -it --cap-add=NET_ADMIN --mac-address="$mac_address" -v "$fake_product_uuid_file:/sys/class/dmi/id/product_uuid" --name="$device_name" "alliance_games_docker_$device_name_lower" bash -c "cd /app && $autostart_command"
+    docker run -it --cap-add=NET_ADMIN --mac-address="$mac_address" -v "$fake_product_uuid_file:/sys/class/dmi/id/product_uuid" --name="$device_name" "alliance_games_docker_$device_name_lower"
 else
-    docker run -it --mac-address="$mac_address" -v "$fake_product_uuid_file:/sys/class/dmi/id/product_uuid" --name="$device_name" "alliance_games_docker_$device_name_lower" bash -c "cd /app && $autostart_command"
+    docker run -it --mac-address="$mac_address" -v "$fake_product_uuid_file:/sys/class/dmi/id/product_uuid" --name="$device_name" "alliance_games_docker_$device_name_lower"
 fi
