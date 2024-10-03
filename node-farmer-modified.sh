@@ -47,12 +47,13 @@ generate_uuid() {
 
 # Get the parameters with validation
 device_name=$(get_non_empty_input "Enter device_name: ")
+device_name_lower=$(echo "$device_name" | tr '[:upper:]' '[:lower:]')  # Convert to lowercase
 
 # Create a directory for this device's configuration
-device_dir="./$device_name"
+device_dir="./$device_name_lower"  # Use lowercase name here
 if [ ! -d "$device_dir" ]; then
     mkdir "$device_dir"
-    echo -e "${INFO}Created directory for $device_name at $device_dir${NC}"
+    echo -e "${INFO}Created directory for $device_name_lower at $device_dir${NC}"
 fi
 
 # Proxy configuration
@@ -95,11 +96,8 @@ ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 EOL
 fi
 
-# Include auto_start.sh in the Dockerfile
 cat <<EOL >> "$device_dir/Dockerfile"
-COPY auto_start.sh /app/auto_start.sh
-RUN chmod +x /app/auto_start.sh
-CMD ["/bin/bash", "/app/auto_start.sh"]
+CMD ["/bin/bash", "-c", "exec /app/auto_start.sh"]
 EOL
 
 # Create the redsocks configuration file only if proxy is used
@@ -161,30 +159,6 @@ exec "\$@"
 EOL
 fi
 
-# Step 2: Create the auto_start.sh script
-echo -e "${INFO}Creating auto_start.sh script...${NC}"
-cat << 'EOL' > "$device_dir/auto_start.sh"
-#!/bin/bash
-
-# Prompt the user for the command to autorun
-echo "Please enter the command you want to autorun on container start:"
-read -r command_input
-
-# Save the command to a script
-echo "#!/bin/bash" > /app/autorun_command.sh
-echo "$command_input" >> /app/autorun_command.sh
-
-# Make the autorun command script executable
-chmod +x /app/autorun_command.sh
-
-# Run the command
-echo "Running the saved command..."
-/app/autorun_command.sh
-
-# Exit the script to prevent staying in the interactive shell
-exit 0
-EOL
-
 # Step 4: Generate a fake product_uuid and store it in a file inside the device directory
 fake_product_uuid_file="$device_dir/fake_uuid.txt"
 if [ ! -f "$fake_product_uuid_file" ]; then
@@ -195,10 +169,10 @@ fi
 # Step 5: Run the Docker container with the user-provided settings and mount the UUID
 mac_address=$(generate_mac_address)
 echo -e "${INFO}Starting Docker container...${NC}"
-docker build -t "alliance_games_docker_$device_name" "$device_dir"
+docker build -t "alliance_games_docker_$device_name_lower" "$device_dir"  # Use lowercase name here
 
 if [[ "$use_proxy" == "Y" || "$use_proxy" == "y" ]]; then
-    docker run -it --cap-add=NET_ADMIN --mac-address="$mac_address" -v "$fake_product_uuid_file:/sys/class/dmi/id/product_uuid" --name="$device_name" "alliance_games_docker_$device_name"
+    docker run -it --cap-add=NET_ADMIN --mac-address="$mac_address" -v "$fake_product_uuid_file:/sys/class/dmi/id/product_uuid" --name="$device_name_lower" "alliance_games_docker_$device_name_lower"  # Use lowercase name here
 else
-    docker run -it --mac-address="$mac_address" -v "$fake_product_uuid_file:/sys/class/dmi/id/product_uuid" --name="$device_name" "alliance_games_docker_$device_name"
+    docker run -it --mac-address="$mac_address" -v "$fake_product_uuid_file:/sys/class/dmi/id/product_uuid" --name="$device_name_lower" "alliance_games_docker_$device_name_lower"  # Use lowercase name here
 fi
