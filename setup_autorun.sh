@@ -1,5 +1,26 @@
 #!/bin/bash
 
+# Define color codes
+INFO='\033[0;36m'  # Cyan
+BANNER='\033[0;35m' # Magenta
+WARNING='\033[0;33m'
+ERROR='\033[0;31m'
+SUCCESS='\033[0;32m'
+NC='\033[0m' # No Color
+
+# Display banner
+echo -e "${BANNER}=========================================================================${NC}"
+echo -e "${BANNER}           _ _ _                         _____                           ${NC}"
+echo -e "${BANNER}     /\\   | | (_)                       / ____|                          ${NC}"
+echo -e "${BANNER}    /  \\  | | |_  __ _ _ __   ___ ___  | |  __  __ _ _ __ ___   ___  ___ ${NC}"
+echo -e "${BANNER}   / /\\ \\ | | | |/ _\` | '_ \\ / __/ _ \\ | | |_ |/ _\` | '_ \` _ \\ / _ \\/ __|${NC}"
+echo -e "${BANNER}  / ____ \\| | | | (_| | | | | (_|  __/ | |__| | (_| | | | | | |  __/\\__ \\ ${NC}"
+echo -e "${BANNER} /_/    \\_\\_|_|_|\\__,_|_| |_|\\___\\___|  \\_____|\\__,_|_| |_| |_|\\___||___/${NC}"
+echo -e "${BANNER}                                                                         ${NC}"
+echo -e "${BANNER}                            Setup_Autorun.sh                             ${NC}"
+echo -e "${BANNER}                          by Nodebot (Juliwicks)                         ${NC}"
+echo -e "${BANNER}=========================================================================${NC}"
+
 # Check for root privileges
 if [[ $EUID -ne 0 ]]; then
     echo "This script must be run as root. Please run with sudo."
