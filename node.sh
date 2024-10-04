@@ -19,6 +19,7 @@ echo -e "${BANNER} /_/    \\_\\_|_|_|\\__,_|_| |_|\\___\\___|  \\_____|\\__,_|_|
 echo -e "${BANNER}                                                                         ${NC}"
 echo -e "${BANNER}               Alliance Games Docker Setup Script v1.0                   ${NC}"
 echo -e "${BANNER}                            by Node Farmer                               ${NC}"
+echo -e "${BANNER}              + Autorun on reboot by Nodebot (Juliwicks)                 ${NC}"
 echo -e "${BANNER}=========================================================================${NC}"
 
 # Function to ensure a non-empty value
