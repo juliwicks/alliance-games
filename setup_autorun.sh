@@ -70,6 +70,6 @@ systemctl daemon-reload
 # Enable the unique service to start on boot
 systemctl enable "docker_autorun_${device_name}.service"
 
-echo "Autorun script created at $unique_autorun_script"
-echo "Systemd service created at $unique_service_file"
-echo "The service has been enabled to run on startup."
+echo -e "${WARNING}Autorun script created at $unique_autorun_script${NC}"
+echo -e "${WARNING}Systemd service created at $unique_service_file${NC}"
+echo -e "${SUCCESS}The service has been enabled to run on startup.${NC}"
