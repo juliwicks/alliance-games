@@ -16,6 +16,10 @@ For a complete step-by-step guide on how to set up Alliance Games nodes with aut
 
 This tutorial covers everything from initial setup to configuring multiple nodes and enabling autorun on reboot.
 
+## Credits
+
+This script was originally created by **Crypto Node Farmer** and modified by **Nodebot (Juliwicks)** to include autorun functionality.
+
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
