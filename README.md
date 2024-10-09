@@ -20,6 +20,6 @@ This tutorial covers everything from initial setup to configuring multiple nodes
 
 This script was originally created by **Crypto Node Farmer** and modified by **Nodebot (Juliwicks)** to include autorun functionality.
 
-## License
+## Disclaimer
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+By following this guide, you agree that the author is not responsible for any errors, omissions, or damages resulting from the use or inability to use the information provided. This includes, but is not limited to, any harm to your software, hardware, data, or other property.
